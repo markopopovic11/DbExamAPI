@@ -112,9 +112,32 @@ evidence of what the database held.
 _Avoid_: exit snapshot, backup
 
 **Auto-populate**:
-The engine filling a student-built schema with data after their DDL is
-accepted, so query tasks have something to return.
+The engine's best-effort filling of a student-built schema with authored
+data on each accepted DDL submission — per table, only ever into empty
+tables, never deleting or overwriting.
 _Avoid_: seeding, data generation (as a concept name)
+
+**Populate Report**:
+The recorded evidence of one auto-populate run: which tables received data,
+which were skipped and why. Visible to the student and to graders.
+_Avoid_: populate log, seed status
+
+**Stage**:
+A contiguous run of an environment's tasks that share one database state
+basis. Stages are separated by restage points; an environment with no
+restage points is one stage.
+_Avoid_: phase, section, part
+
+**Restage Point**:
+An authored boundary between two stages, carrying the template whose clone
+becomes the next stage's database when the stage before it is finalized.
+_Avoid_: checkpoint, milestone
+
+**Finalize**:
+The participant's explicit, irreversible closing of a stage: its tasks lock
+against further submissions, the database is captured, and the next stage's
+database is swapped in. Exam end finalizes whatever remains open.
+_Avoid_: complete, lock (as act names), submit stage
 
 ### Record & judging
 
