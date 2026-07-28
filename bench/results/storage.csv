@@ -1,0 +1,8 @@
+db_count,315
+template_bytes,22279859
+avg_clone_bytes,22118927
+sum_clone_bytes,6635678100
+shared_catalog_pg_database_bytes,172032
+shared_catalog_pg_authid_bytes,155648
+pgdata_total_MiB,10632
+pg_wal_MiB,4097

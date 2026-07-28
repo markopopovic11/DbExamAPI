@@ -1,0 +1,7 @@
+template_build_ms,857
+ pg_size_pretty | pg_database_size 
+----------------+------------------
+ 21 MB          |         22279859
+(1 row)
+
+Time: 0.563 ms

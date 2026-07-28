@@ -1,0 +1,28 @@
+ active_backends |   306
+
+serial_25_wall_ms,903
+parallel_40_wall_ms,400730
+ autovacuum_workers |     0
+
+ autovacuum_workers |     0
+
+ autovacuum_workers |     0
+
+latency average = 3009.566 ms
+initial connection time = 126.817 ms
+tps = 16.612060 (without initial connection time)
+latency average = 3009.424 ms
+initial connection time = 144.153 ms
+tps = 16.613275 (without initial connection time)
+latency average = 3009.452 ms
+initial connection time = 137.419 ms
+tps = 16.612598 (without initial connection time)
+latency average = 3008.949 ms
+initial connection time = 208.290 ms
+tps = 16.615938 (without initial connection time)
+latency average = 3009.382 ms
+initial connection time = 143.821 ms
+tps = 16.613479 (without initial connection time)
+latency average = 3009.136 ms
+initial connection time = 199.455 ms
+tps = 16.614649 (without initial connection time)
