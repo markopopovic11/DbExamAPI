@@ -139,6 +139,26 @@ against further submissions, the database is captured, and the next stage's
 database is swapped in. Exam end finalizes whatever remains open.
 _Avoid_: complete, lock (as act names), submit stage
 
+### Containment & operations
+
+**Watchdog**:
+The engine's out-of-session monitor of student databases — sizes, query
+runtimes, connections — that automatically cancels queries or terminates
+sessions past admin-set ceilings, since in-session limits are
+student-defeatable.
+_Avoid_: monitor, reaper, sentinel
+
+**Evict**:
+The operator-only act of suspending a student's database access mid-exam:
+every session terminated and login blocked until explicitly reinstated.
+Automation stops at session termination; eviction is always a human decision.
+_Avoid_: ban, kick, lock out
+
+**Incident**:
+The recorded evidence of one containment event — which student, what breached,
+what the watchdog saw and did. The trail behind every eviction decision.
+_Avoid_: alert, violation
+
 ### Record & judging
 
 **Submission**:
