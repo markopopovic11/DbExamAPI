@@ -74,23 +74,42 @@ _Avoid_: delete, deactivate (as concept names), archive
 
 **Managed Database**:
 One physical PostgreSQL database the system created, tracked for its whole
-life as a self-contained connection descriptor (name, credentials, state,
-holder). Never reused, never forgotten — discarded ones remain as history.
+life (state, holder, which connection descriptor it currently serves). Never
+reused, never forgotten — discarded ones remain as history.
 _Avoid_: instance, workspace, sandbox
+
+**Connection Descriptor**:
+The stable connection details (host, port, database name, role, password) a
+participant uses for one environment — fixed for the whole exam, even across
+swaps.
+_Avoid_: connection string, DSN, credentials (alone)
 
 **Pool**:
 The stock of ready, unassigned managed databases kept pre-created for an
-environment so a fresh one can be handed out instantly.
+environment so a fresh one can be handed out instantly. May be empty — a
+fresh database can always be cloned on the spot instead.
 _Avoid_: cache, buffer
+
+**Prep**:
+The admin-triggered act of creating and assigning every enrolled
+participant's databases before the exam window opens.
+_Avoid_: warmup, pre-provisioning
 
 **Claim**:
 The atomic act of assigning an available pooled database to a participant.
 _Avoid_: allocate, checkout
 
 **Swap**:
-Discarding a participant's ruined database and claiming a fresh one, while the
-pool replenishes in the background.
+Discarding a participant's ruined database and handing them a fresh one
+behind their unchanged connection descriptor, taking a swap capture on the
+way out.
 _Avoid_: reset (that's the environment policy family), reprovision
+
+**Swap Capture**:
+The pulled submission taken from a database at the moment it is discarded,
+so un-pulled work never dies with a swap. An empty capture is itself
+evidence of what the database held.
+_Avoid_: exit snapshot, backup
 
 **Auto-populate**:
 The engine filling a student-built schema with data after their DDL is
