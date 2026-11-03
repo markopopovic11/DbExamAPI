@@ -101,4 +101,20 @@ public class UserDetailServiceImpl implements UserDetailService {
         log.info("Deleted user detail with id: {}", id);
         return userDetail;
     }
+
+    @Override
+    public Optional<UserDetail> findByEmail(String email) {
+        return userDetailRepository.findByEmail(email);
+    }
+
+    @Override
+    @Transactional
+    public UserDetail updatePassword(String id, String encodedPassword) {
+        UserDetail userDetail = findByIdNotNull(id);
+        userDetail.setPassword(encodedPassword);
+
+        UserDetail saved = userDetailRepository.save(userDetail);
+        log.info("Updated password of user detail with id: {}", saved.getId());
+        return saved;
+    }
 }

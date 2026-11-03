@@ -5,6 +5,11 @@ import finki.ukim.mk.dbexamapi.domain.models.content.Folder;
 public record DocumentDto(
         Folder folder,
         String name,
-        String documentMd
+        String contentMd,
+        String filePath,
+        String url,
+        String mimeType,
+        Integer sizeBytes,
+        int sortOrder
 ) {
 }

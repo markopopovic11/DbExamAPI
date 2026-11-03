@@ -50,6 +50,7 @@ public class CourseServiceImpl implements CourseService {
         Course course = new Course();
         course.setCode(courseDto.code());
         course.setName(courseDto.name());
+        course.setActive(courseDto.active());
 
         Course saved = courseRepository.save(course);
         log.info("Created course with id: {}", saved.getId());
@@ -67,6 +68,7 @@ public class CourseServiceImpl implements CourseService {
 
         course.setCode(courseDto.code());
         course.setName(courseDto.name());
+        course.setActive(courseDto.active());
 
         Course saved = courseRepository.save(course);
         log.info("Updated course with id: {}", saved.getId());

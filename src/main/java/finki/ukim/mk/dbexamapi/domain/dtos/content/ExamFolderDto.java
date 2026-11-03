@@ -5,6 +5,7 @@ import finki.ukim.mk.dbexamapi.domain.models.content.Folder;
 
 public record ExamFolderDto(
         Exam exam,
-        Folder folder
+        Folder folder,
+        int sortOrder
 ) {
 }

@@ -43,6 +43,7 @@ public class FolderServiceImpl implements FolderService {
     @Transactional
     public Folder create(FolderDto folderDto) {
         Folder folder = new Folder();
+        folder.setCourse(folderDto.course());
         folder.setName(folderDto.name());
 
         Folder saved = folderRepository.save(folder);
@@ -55,6 +56,7 @@ public class FolderServiceImpl implements FolderService {
     public Folder update(String id, FolderDto folderDto) {
         Folder folder = findByIdNotNull(id);
 
+        folder.setCourse(folderDto.course());
         folder.setName(folderDto.name());
 
         Folder saved = folderRepository.save(folder);

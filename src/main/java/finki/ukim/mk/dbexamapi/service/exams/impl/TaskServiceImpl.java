@@ -1,17 +1,20 @@
 package finki.ukim.mk.dbexamapi.service.exams.impl;
 
 import finki.ukim.mk.dbexamapi.domain.dtos.exams.TaskDto;
-import finki.ukim.mk.dbexamapi.domain.enums.SubmissionMode;
 import finki.ukim.mk.dbexamapi.domain.enums.TaskType;
+import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TaskDataSourceInvalidException;
 import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TaskDoesNotExistException;
-import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TaskEnvironmentExamMismatchException;
-import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TaskEnvironmentRetiredException;
-import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TaskPositionAlreadyExistsException;
-import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TaskSubmissionModeInvalidException;
+import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TaskExamImmutableException;
+import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TaskGroupExamMismatchException;
+import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TaskInUseException;
+import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TaskSortOrderAlreadyExistsException;
 import finki.ukim.mk.dbexamapi.domain.models.exams.Task;
-import finki.ukim.mk.dbexamapi.repository.content.TaskFolderRepository;
 import finki.ukim.mk.dbexamapi.repository.exams.TaskRepository;
+import finki.ukim.mk.dbexamapi.service.content.TaskDocumentService;
+import finki.ukim.mk.dbexamapi.service.datasets.TaskVersionService;
+import finki.ukim.mk.dbexamapi.service.exams.TaskObjectService;
 import finki.ukim.mk.dbexamapi.service.exams.TaskService;
+import finki.ukim.mk.dbexamapi.service.exams.TestStepService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,11 +28,21 @@ import java.util.Optional;
 public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
-    private final TaskFolderRepository taskFolderRepository;
+    private final TaskDocumentService taskDocumentService;
+    private final TaskObjectService taskObjectService;
+    private final TestStepService testStepService;
+    private final TaskVersionService taskVersionService;
 
-    public TaskServiceImpl(TaskRepository taskRepository, TaskFolderRepository taskFolderRepository) {
+    public TaskServiceImpl(TaskRepository taskRepository,
+                           TaskDocumentService taskDocumentService,
+                           TaskObjectService taskObjectService,
+                           TestStepService testStepService,
+                           TaskVersionService taskVersionService) {
         this.taskRepository = taskRepository;
-        this.taskFolderRepository = taskFolderRepository;
+        this.taskDocumentService = taskDocumentService;
+        this.taskObjectService = taskObjectService;
+        this.testStepService = testStepService;
+        this.taskVersionService = taskVersionService;
     }
 
     @Override
@@ -51,23 +64,20 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @Transactional
     public Task create(TaskDto taskDto) {
-        validateEnvironmentActive(taskDto);
-        validateSubmissionMode(taskDto);
-
-        String examId = taskDto.environment().getExam().getId();
-        if (taskRepository.existsByExam_IdAndPosition(examId, taskDto.position())) {
-            throw new TaskPositionAlreadyExistsException(examId, taskDto.position());
-        }
+        validate(taskDto, null);
 
         Task task = new Task();
-        task.setExam(taskDto.environment().getExam());
-        task.setEnvironment(taskDto.environment());
-        task.setPosition(taskDto.position());
+        task.setExam(taskDto.exam());
+        task.setGroup(taskDto.group());
+        task.setType(taskDto.type());
+        task.setDataSource(taskDto.dataSource());
+        task.setSourceTask(taskDto.sourceTask());
+        task.setDataset(taskDto.dataset());
+        task.setSolution(taskDto.solution());
         task.setTitle(taskDto.title());
         task.setDescription(taskDto.description());
-        task.setTaskType(taskDto.taskType());
-        task.setSubmissionMode(taskDto.submissionMode());
         task.setPoints(taskDto.points());
+        task.setSortOrder(taskDto.sortOrder());
 
         Task saved = taskRepository.save(task);
         log.info("Created task with id: {}", saved.getId());
@@ -79,23 +89,21 @@ public class TaskServiceImpl implements TaskService {
     public Task update(String id, TaskDto taskDto) {
         Task task = findByIdNotNull(id);
 
-        if (!taskDto.environment().getExam().getId().equals(task.getExam().getId())) {
-            throw new TaskEnvironmentExamMismatchException(id, taskDto.environment().getId());
+        if (!taskDto.exam().getId().equals(task.getExam().getId())) {
+            throw new TaskExamImmutableException(id);
         }
-        validateEnvironmentActive(taskDto);
-        validateSubmissionMode(taskDto);
+        validate(taskDto, id);
 
-        if (taskRepository.existsByExam_IdAndPositionAndIdNot(task.getExam().getId(), taskDto.position(), id)) {
-            throw new TaskPositionAlreadyExistsException(task.getExam().getId(), taskDto.position());
-        }
-
-        task.setEnvironment(taskDto.environment());
-        task.setPosition(taskDto.position());
+        task.setGroup(taskDto.group());
+        task.setType(taskDto.type());
+        task.setDataSource(taskDto.dataSource());
+        task.setSourceTask(taskDto.sourceTask());
+        task.setDataset(taskDto.dataset());
+        task.setSolution(taskDto.solution());
         task.setTitle(taskDto.title());
         task.setDescription(taskDto.description());
-        task.setTaskType(taskDto.taskType());
-        task.setSubmissionMode(taskDto.submissionMode());
         task.setPoints(taskDto.points());
+        task.setSortOrder(taskDto.sortOrder());
 
         Task saved = taskRepository.save(task);
         log.info("Updated task with id: {}", saved.getId());
@@ -106,21 +114,76 @@ public class TaskServiceImpl implements TaskService {
     @Transactional
     public Task deleteById(String id) {
         Task task = findByIdNotNull(id);
-        taskFolderRepository.deleteAllByTask_Id(id);
+        if (taskRepository.existsBySourceTask_Id(id)) {
+            throw new TaskInUseException(id);
+        }
+
+        taskVersionService.deleteAllByTaskId(id);
+        testStepService.deleteAllByTaskId(id);
+        taskObjectService.deleteAllByTaskId(id);
+        taskDocumentService.deleteAllByTaskId(id);
         taskRepository.delete(task);
-        log.info("Deleted task with id: {} and its folder attachments", id);
+        log.info("Deleted task with id: {} and everything that belongs to it", id);
         return task;
     }
 
-    private void validateEnvironmentActive(TaskDto taskDto) {
-        if (!taskDto.environment().isActive()) {
-            throw new TaskEnvironmentRetiredException(taskDto.environment().getId());
+    @Override
+    public boolean existsByGroupId(String groupId) {
+        return taskRepository.existsByGroup_Id(groupId);
+    }
+
+    @Override
+    public boolean existsByDatasetId(String datasetId) {
+        return taskRepository.existsByDataset_Id(datasetId);
+    }
+
+    private void validate(TaskDto taskDto, String id) {
+        String examId = taskDto.exam().getId();
+        String groupId = taskDto.group() == null ? null : taskDto.group().getId();
+
+        if (taskDto.group() != null && !taskDto.group().getExam().getId().equals(examId)) {
+            throw new TaskGroupExamMismatchException(groupId, examId);
+        }
+        validateDataSource(taskDto, examId);
+
+        if (taskRepository.existsSortOrderInGroupView(examId, groupId, taskDto.sortOrder(), id)) {
+            throw new TaskSortOrderAlreadyExistsException(examId, taskDto.sortOrder());
         }
     }
 
-    private void validateSubmissionMode(TaskDto taskDto) {
-        if (taskDto.taskType() == TaskType.SQL_QUERY && taskDto.submissionMode() != SubmissionMode.SQL_TEXT) {
-            throw new TaskSubmissionModeInvalidException();
+    private void validateDataSource(TaskDto taskDto, String examId) {
+        boolean runsOnData = taskDto.type() == TaskType.QUERY || taskDto.type() == TaskType.CODE;
+
+        if (!runsOnData) {
+            if (taskDto.dataSource() != null || taskDto.sourceTask() != null || taskDto.dataset() != null) {
+                throw new TaskDataSourceInvalidException("only QUERY and CODE tasks have a data source");
+            }
+            return;
+        }
+        if (taskDto.dataSource() == null) {
+            throw new TaskDataSourceInvalidException("QUERY and CODE tasks need a data source");
+        }
+
+        switch (taskDto.dataSource()) {
+            case DATASETS -> {
+                if (taskDto.dataset() == null || taskDto.sourceTask() != null) {
+                    throw new TaskDataSourceInvalidException("DATASETS needs a dataset and no source task");
+                }
+                if (!taskDto.dataset().getExam().getId().equals(examId)) {
+                    throw new TaskDataSourceInvalidException("the dataset must belong to the task's exam");
+                }
+            }
+            case OWN_SCHEMA -> {
+                if (taskDto.sourceTask() == null || taskDto.dataset() != null) {
+                    throw new TaskDataSourceInvalidException("OWN_SCHEMA needs a source task and no dataset");
+                }
+                if (taskDto.sourceTask().getType() != TaskType.DDL) {
+                    throw new TaskDataSourceInvalidException("the source task must be a DDL task");
+                }
+                if (!taskDto.sourceTask().getExam().getId().equals(examId)) {
+                    throw new TaskDataSourceInvalidException("the source task must belong to the task's exam");
+                }
+            }
         }
     }
 }

@@ -12,7 +12,6 @@ import finki.ukim.mk.dbexamapi.domain.exceptions.auth.InvalidTokenException;
 import finki.ukim.mk.dbexamapi.domain.exceptions.auth.PasswordsDoNotMatchException;
 import finki.ukim.mk.dbexamapi.domain.models.identity.User;
 import finki.ukim.mk.dbexamapi.domain.models.identity.UserDetail;
-import finki.ukim.mk.dbexamapi.repository.identity.UserDetailRepository;
 import finki.ukim.mk.dbexamapi.service.auth.AuthService;
 import finki.ukim.mk.dbexamapi.service.auth.TokenService;
 import finki.ukim.mk.dbexamapi.service.identity.UserDetailService;
@@ -29,18 +28,15 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserService userService;
     private final UserDetailService userDetailService;
-    private final UserDetailRepository userDetailRepository;
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
 
     public AuthServiceImpl(UserService userService,
                            UserDetailService userDetailService,
-                           UserDetailRepository userDetailRepository,
                            TokenService tokenService,
                            PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.userDetailService = userDetailService;
-        this.userDetailRepository = userDetailRepository;
         this.tokenService = tokenService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -60,8 +56,7 @@ public class AuthServiceImpl implements AuthService {
                 registerDto.index(),
                 registerDto.email()
         ));
-        userDetail.setPassword(passwordEncoder.encode(registerDto.password()));
-        userDetailRepository.save(userDetail);
+        userDetailService.updatePassword(userDetail.getId(), passwordEncoder.encode(registerDto.password()));
 
         log.info("Registered user with id: {}", user.getId());
         return new AuthDto(user, tokenService.generateAuthTokens(user));
@@ -69,7 +64,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthDto login(String email, String password) {
-        UserDetail userDetail = userDetailRepository.findByEmail(email)
+        UserDetail userDetail = userDetailService.findByEmail(email)
                 .orElseThrow(InvalidCredentialsException::new);
 
         if (userDetail.getPassword() == null || !passwordEncoder.matches(password, userDetail.getPassword())) {

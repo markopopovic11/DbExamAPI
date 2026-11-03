@@ -52,6 +52,7 @@ public class ExamFolderServiceImpl implements ExamFolderService {
         ExamFolder examFolder = new ExamFolder();
         examFolder.setExam(examFolderDto.exam());
         examFolder.setFolder(examFolderDto.folder());
+        examFolder.setSortOrder(examFolderDto.sortOrder());
 
         ExamFolder saved = examFolderRepository.save(examFolder);
         log.info("Created exam folder with id: {}", saved.getId());
@@ -71,6 +72,7 @@ public class ExamFolderServiceImpl implements ExamFolderService {
 
         examFolder.setExam(examFolderDto.exam());
         examFolder.setFolder(examFolderDto.folder());
+        examFolder.setSortOrder(examFolderDto.sortOrder());
 
         ExamFolder saved = examFolderRepository.save(examFolder);
         log.info("Updated exam folder with id: {}", saved.getId());
