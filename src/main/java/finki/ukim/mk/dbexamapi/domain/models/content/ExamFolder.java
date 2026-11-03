@@ -1,8 +1,7 @@
 package finki.ukim.mk.dbexamapi.domain.models.content;
 
-import finki.ukim.mk.dbexamapi.domain.models.exams.Exam;
-
 import finki.ukim.mk.dbexamapi.domain.models.common.BaseEntity;
+import finki.ukim.mk.dbexamapi.domain.models.exams.Exam;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,4 +23,7 @@ public class ExamFolder extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "folder_id", nullable = false)
     private Folder folder;
+
+    @Column(name = "sort_order", nullable = false)
+    private int sortOrder = 0;
 }
