@@ -1,15 +1,13 @@
 package finki.ukim.mk.dbexamapi.service.datasets.impl;
 
 import finki.ukim.mk.dbexamapi.domain.dtos.datasets.ExpectedResultDto;
-import finki.ukim.mk.dbexamapi.domain.enums.TaskType;
 import finki.ukim.mk.dbexamapi.domain.exceptions.datasets.ExpectedResultAlreadyExistsException;
 import finki.ukim.mk.dbexamapi.domain.exceptions.datasets.ExpectedResultDoesNotExistException;
-import finki.ukim.mk.dbexamapi.domain.exceptions.datasets.ExpectedResultStepInvalidException;
-import finki.ukim.mk.dbexamapi.domain.exceptions.datasets.ExpectedResultVersionMismatchException;
 import finki.ukim.mk.dbexamapi.domain.models.datasets.ExpectedResult;
-import finki.ukim.mk.dbexamapi.domain.models.exams.Task;
 import finki.ukim.mk.dbexamapi.repository.datasets.ExpectedResultRepository;
 import finki.ukim.mk.dbexamapi.service.datasets.ExpectedResultService;
+import finki.ukim.mk.dbexamapi.helpers.datasets.DatasetVersionRuleHelper;
+import finki.ukim.mk.dbexamapi.helpers.datasets.ExpectedResultRuleHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,9 +21,15 @@ import java.util.Optional;
 public class ExpectedResultServiceImpl implements ExpectedResultService {
 
     private final ExpectedResultRepository expectedResultRepository;
+    private final DatasetVersionRuleHelper datasetVersionRuleHelper;
+    private final ExpectedResultRuleHelper expectedResultRuleHelper;
 
-    public ExpectedResultServiceImpl(ExpectedResultRepository expectedResultRepository) {
+    public ExpectedResultServiceImpl(ExpectedResultRepository expectedResultRepository,
+                                     DatasetVersionRuleHelper datasetVersionRuleHelper,
+                                     ExpectedResultRuleHelper expectedResultRuleHelper) {
         this.expectedResultRepository = expectedResultRepository;
+        this.datasetVersionRuleHelper = datasetVersionRuleHelper;
+        this.expectedResultRuleHelper = expectedResultRuleHelper;
     }
 
     @Override
@@ -47,7 +51,9 @@ public class ExpectedResultServiceImpl implements ExpectedResultService {
     @Override
     @Transactional
     public ExpectedResult create(ExpectedResultDto expectedResultDto) {
-        validate(expectedResultDto, null);
+        datasetVersionRuleHelper.requireVersionOfTaskDataset(expectedResultDto.task(), expectedResultDto.version());
+        expectedResultRuleHelper.requireStepFitsTask(expectedResultDto);
+        requireNotDuplicate(expectedResultDto, null);
 
         ExpectedResult expectedResult = new ExpectedResult();
         expectedResult.setTask(expectedResultDto.task());
@@ -66,7 +72,9 @@ public class ExpectedResultServiceImpl implements ExpectedResultService {
     public ExpectedResult update(String id, ExpectedResultDto expectedResultDto) {
         ExpectedResult expectedResult = findByIdNotNull(id);
 
-        validate(expectedResultDto, id);
+        datasetVersionRuleHelper.requireVersionOfTaskDataset(expectedResultDto.task(), expectedResultDto.version());
+        expectedResultRuleHelper.requireStepFitsTask(expectedResultDto);
+        requireNotDuplicate(expectedResultDto, id);
 
         expectedResult.setTask(expectedResultDto.task());
         expectedResult.setVersion(expectedResultDto.version());
@@ -112,38 +120,27 @@ public class ExpectedResultServiceImpl implements ExpectedResultService {
         expectedResultRepository.deleteAllByStep_Task_Id(taskId);
     }
 
-    private void validate(ExpectedResultDto expectedResultDto, String id) {
-        Task task = expectedResultDto.task();
-        String taskId = task.getId();
+    // One result per task and version for QUERY, per task, version and step for CODE. id is null on create.
+    private void requireNotDuplicate(ExpectedResultDto expectedResultDto, String id) {
+        String taskId = expectedResultDto.task().getId();
         String versionId = expectedResultDto.version().getId();
-
-        if (task.getDataset() == null
-                || !expectedResultDto.version().getDataset().getId().equals(task.getDataset().getId())) {
-            throw new ExpectedResultVersionMismatchException(taskId, versionId);
-        }
-
-        if (task.getType() == TaskType.QUERY) {
-            if (expectedResultDto.step() != null) {
-                throw new ExpectedResultStepInvalidException("QUERY results have no step");
-            }
-            boolean exists = id == null
-                    ? expectedResultRepository.existsByTask_IdAndVersion_IdAndStepIsNull(taskId, versionId)
-                    : expectedResultRepository.existsByTask_IdAndVersion_IdAndStepIsNullAndIdNot(taskId, versionId, id);
-            if (exists) {
-                throw new ExpectedResultAlreadyExistsException(taskId, versionId);
-            }
-            return;
-        }
-
-        if (expectedResultDto.step() == null || !expectedResultDto.step().getTask().getId().equals(taskId)) {
-            throw new ExpectedResultStepInvalidException("CODE results need a step of the same task");
-        }
-        String stepId = expectedResultDto.step().getId();
-        boolean exists = id == null
-                ? expectedResultRepository.existsByTask_IdAndVersion_IdAndStep_Id(taskId, versionId, stepId)
-                : expectedResultRepository.existsByTask_IdAndVersion_IdAndStep_IdAndIdNot(taskId, versionId, stepId, id);
+        boolean exists = expectedResultDto.step() == null
+                ? existsWithoutStep(taskId, versionId, id)
+                : existsWithStep(taskId, versionId, expectedResultDto.step().getId(), id);
         if (exists) {
             throw new ExpectedResultAlreadyExistsException(taskId, versionId);
         }
+    }
+
+    private boolean existsWithoutStep(String taskId, String versionId, String id) {
+        return id == null
+                ? expectedResultRepository.existsByTask_IdAndVersion_IdAndStepIsNull(taskId, versionId)
+                : expectedResultRepository.existsByTask_IdAndVersion_IdAndStepIsNullAndIdNot(taskId, versionId, id);
+    }
+
+    private boolean existsWithStep(String taskId, String versionId, String stepId, String id) {
+        return id == null
+                ? expectedResultRepository.existsByTask_IdAndVersion_IdAndStep_Id(taskId, versionId, stepId)
+                : expectedResultRepository.existsByTask_IdAndVersion_IdAndStep_IdAndIdNot(taskId, versionId, stepId, id);
     }
 }

@@ -1,16 +1,14 @@
 package finki.ukim.mk.dbexamapi.service.exams.impl;
 
 import finki.ukim.mk.dbexamapi.domain.dtos.exams.TestStepDto;
-import finki.ukim.mk.dbexamapi.domain.enums.TaskType;
-import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TestStepCheckRequiredException;
 import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TestStepDoesNotExistException;
 import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TestStepSortOrderAlreadyExistsException;
 import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TestStepTaskImmutableException;
-import finki.ukim.mk.dbexamapi.domain.exceptions.exams.TestStepTaskNotCodeException;
 import finki.ukim.mk.dbexamapi.domain.models.exams.TestStep;
 import finki.ukim.mk.dbexamapi.repository.exams.TestStepRepository;
 import finki.ukim.mk.dbexamapi.service.datasets.ExpectedResultService;
 import finki.ukim.mk.dbexamapi.service.exams.TestStepService;
+import finki.ukim.mk.dbexamapi.helpers.exams.TestStepRuleHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,10 +23,14 @@ public class TestStepServiceImpl implements TestStepService {
 
     private final TestStepRepository testStepRepository;
     private final ExpectedResultService expectedResultService;
+    private final TestStepRuleHelper testStepRuleHelper;
 
-    public TestStepServiceImpl(TestStepRepository testStepRepository, ExpectedResultService expectedResultService) {
+    public TestStepServiceImpl(TestStepRepository testStepRepository,
+                               ExpectedResultService expectedResultService,
+                               TestStepRuleHelper testStepRuleHelper) {
         this.testStepRepository = testStepRepository;
         this.expectedResultService = expectedResultService;
+        this.testStepRuleHelper = testStepRuleHelper;
     }
 
     @Override
@@ -50,7 +52,8 @@ public class TestStepServiceImpl implements TestStepService {
     @Override
     @Transactional
     public TestStep create(TestStepDto testStepDto) {
-        validateTaskAndCheck(testStepDto);
+        testStepRuleHelper.requireCodeTask(testStepDto);
+        testStepRuleHelper.requireCheckUnlessErrorExpected(testStepDto);
 
         String taskId = testStepDto.task().getId();
         if (testStepRepository.existsByTask_IdAndSortOrder(taskId, testStepDto.sortOrder())) {
@@ -78,7 +81,8 @@ public class TestStepServiceImpl implements TestStepService {
         if (!testStepDto.task().getId().equals(taskId)) {
             throw new TestStepTaskImmutableException(id);
         }
-        validateTaskAndCheck(testStepDto);
+        testStepRuleHelper.requireCodeTask(testStepDto);
+        testStepRuleHelper.requireCheckUnlessErrorExpected(testStepDto);
 
         if (testStepRepository.existsByTask_IdAndSortOrderAndIdNot(taskId, testStepDto.sortOrder(), id)) {
             throw new TestStepSortOrderAlreadyExistsException(taskId, testStepDto.sortOrder());
@@ -110,14 +114,5 @@ public class TestStepServiceImpl implements TestStepService {
         expectedResultService.deleteAllByStepTaskId(taskId);
         testStepRepository.deleteAllByTask_Id(taskId);
         log.info("Deleted test steps of task with id: {} and their expected results", taskId);
-    }
-
-    private void validateTaskAndCheck(TestStepDto testStepDto) {
-        if (testStepDto.task().getType() != TaskType.CODE) {
-            throw new TestStepTaskNotCodeException(testStepDto.task().getId());
-        }
-        if (testStepDto.checkSql() == null && !testStepDto.expectError()) {
-            throw new TestStepCheckRequiredException();
-        }
     }
 }

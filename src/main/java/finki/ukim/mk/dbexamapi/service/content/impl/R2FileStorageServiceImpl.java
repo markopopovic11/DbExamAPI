@@ -1,9 +1,9 @@
 package finki.ukim.mk.dbexamapi.service.content.impl;
 
-import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import finki.ukim.mk.dbexamapi.config.R2Properties;
 import finki.ukim.mk.dbexamapi.domain.exceptions.content.StoredFileDoesNotExistException;
 import finki.ukim.mk.dbexamapi.service.content.FileStorageService;
+import finki.ukim.mk.dbexamapi.helpers.content.FileNameHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -25,15 +25,17 @@ public class R2FileStorageServiceImpl implements FileStorageService {
 
     private final S3Client r2Client;
     private final String bucket;
+    private final FileNameHelper fileNameHelper;
 
-    public R2FileStorageServiceImpl(S3Client r2Client, R2Properties r2Properties) {
+    public R2FileStorageServiceImpl(S3Client r2Client, R2Properties r2Properties, FileNameHelper fileNameHelper) {
         this.r2Client = r2Client;
         this.bucket = r2Properties.bucket();
+        this.fileNameHelper = fileNameHelper;
     }
 
     @Override
     public String store(String originalFilename, String contentType, long sizeBytes, InputStream content) {
-        String filePath = KEY_PREFIX + NanoIdUtils.randomNanoId() + extensionOf(originalFilename);
+        String filePath = KEY_PREFIX + fileNameHelper.newStoredName(originalFilename);
         r2Client.putObject(
                 PutObjectRequest.builder()
                         .bucket(bucket)
@@ -60,20 +62,5 @@ public class R2FileStorageServiceImpl implements FileStorageService {
     public void delete(String filePath) {
         r2Client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(filePath).build());
         log.info("Deleted file from R2: {}", filePath);
-    }
-
-    /**
-     * Keeps a short alphanumeric extension like .sql or .pdf, so the stored file stays recognisable.
-     */
-    private String extensionOf(String originalFilename) {
-        if (originalFilename == null) {
-            return "";
-        }
-        int dot = originalFilename.lastIndexOf('.');
-        if (dot < 0) {
-            return "";
-        }
-        String extension = originalFilename.substring(dot + 1);
-        return extension.matches("[A-Za-z0-9]{1,10}") ? "." + extension.toLowerCase() : "";
     }
 }

@@ -2,12 +2,12 @@ package finki.ukim.mk.dbexamapi.service.datasets.impl;
 
 import finki.ukim.mk.dbexamapi.domain.dtos.datasets.TaskVersionDto;
 import finki.ukim.mk.dbexamapi.domain.exceptions.datasets.TaskVersionAlreadyExistsException;
-import finki.ukim.mk.dbexamapi.domain.exceptions.datasets.TaskVersionDatasetMismatchException;
 import finki.ukim.mk.dbexamapi.domain.exceptions.datasets.TaskVersionDoesNotExistException;
 import finki.ukim.mk.dbexamapi.domain.models.datasets.TaskVersion;
 import finki.ukim.mk.dbexamapi.repository.datasets.TaskVersionRepository;
 import finki.ukim.mk.dbexamapi.service.datasets.ExpectedResultService;
 import finki.ukim.mk.dbexamapi.service.datasets.TaskVersionService;
+import finki.ukim.mk.dbexamapi.helpers.datasets.DatasetVersionRuleHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,11 +22,14 @@ public class TaskVersionServiceImpl implements TaskVersionService {
 
     private final TaskVersionRepository taskVersionRepository;
     private final ExpectedResultService expectedResultService;
+    private final DatasetVersionRuleHelper datasetVersionRuleHelper;
 
     public TaskVersionServiceImpl(TaskVersionRepository taskVersionRepository,
-                                  ExpectedResultService expectedResultService) {
+                                  ExpectedResultService expectedResultService,
+                                  DatasetVersionRuleHelper datasetVersionRuleHelper) {
         this.taskVersionRepository = taskVersionRepository;
         this.expectedResultService = expectedResultService;
+        this.datasetVersionRuleHelper = datasetVersionRuleHelper;
     }
 
     @Override
@@ -48,7 +51,7 @@ public class TaskVersionServiceImpl implements TaskVersionService {
     @Override
     @Transactional
     public TaskVersion create(TaskVersionDto taskVersionDto) {
-        validateDataset(taskVersionDto);
+        datasetVersionRuleHelper.requireVersionOfTaskDataset(taskVersionDto.task(), taskVersionDto.version());
 
         String taskId = taskVersionDto.task().getId();
         String versionId = taskVersionDto.version().getId();
@@ -70,7 +73,7 @@ public class TaskVersionServiceImpl implements TaskVersionService {
     public TaskVersion update(String id, TaskVersionDto taskVersionDto) {
         TaskVersion taskVersion = findByIdNotNull(id);
 
-        validateDataset(taskVersionDto);
+        datasetVersionRuleHelper.requireVersionOfTaskDataset(taskVersionDto.task(), taskVersionDto.version());
 
         String taskId = taskVersionDto.task().getId();
         String versionId = taskVersionDto.version().getId();
@@ -111,13 +114,5 @@ public class TaskVersionServiceImpl implements TaskVersionService {
         expectedResultService.deleteAllByTaskId(taskId);
         taskVersionRepository.deleteAllByTask_Id(taskId);
         log.info("Deleted task versions of task with id: {} and its expected results", taskId);
-    }
-
-    private void validateDataset(TaskVersionDto taskVersionDto) {
-        if (taskVersionDto.task().getDataset() == null
-                || !taskVersionDto.version().getDataset().getId().equals(taskVersionDto.task().getDataset().getId())) {
-            throw new TaskVersionDatasetMismatchException(
-                    taskVersionDto.task().getId(), taskVersionDto.version().getId());
-        }
     }
 }

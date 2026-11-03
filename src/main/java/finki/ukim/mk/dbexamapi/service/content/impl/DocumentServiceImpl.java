@@ -3,14 +3,13 @@ package finki.ukim.mk.dbexamapi.service.content.impl;
 import finki.ukim.mk.dbexamapi.domain.dtos.content.DocumentDto;
 import finki.ukim.mk.dbexamapi.domain.exceptions.content.DocumentDoesNotExistException;
 import finki.ukim.mk.dbexamapi.domain.exceptions.content.DocumentFileDoesNotExistException;
-import finki.ukim.mk.dbexamapi.domain.exceptions.content.DocumentFileEmptyException;
 import finki.ukim.mk.dbexamapi.domain.exceptions.content.DocumentInUseException;
-import finki.ukim.mk.dbexamapi.domain.exceptions.content.DocumentSourceInvalidException;
 import finki.ukim.mk.dbexamapi.domain.models.content.Document;
 import finki.ukim.mk.dbexamapi.repository.content.DocumentRepository;
 import finki.ukim.mk.dbexamapi.service.content.DocumentService;
 import finki.ukim.mk.dbexamapi.service.content.FileStorageService;
 import finki.ukim.mk.dbexamapi.service.content.TaskDocumentService;
+import finki.ukim.mk.dbexamapi.helpers.content.DocumentRuleHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -19,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -29,13 +27,16 @@ public class DocumentServiceImpl implements DocumentService {
     private final DocumentRepository documentRepository;
     private final TaskDocumentService taskDocumentService;
     private final FileStorageService fileStorageService;
+    private final DocumentRuleHelper documentRuleHelper;
 
     public DocumentServiceImpl(DocumentRepository documentRepository,
                                TaskDocumentService taskDocumentService,
-                               FileStorageService fileStorageService) {
+                               FileStorageService fileStorageService,
+                               DocumentRuleHelper documentRuleHelper) {
         this.documentRepository = documentRepository;
         this.taskDocumentService = taskDocumentService;
         this.fileStorageService = fileStorageService;
+        this.documentRuleHelper = documentRuleHelper;
     }
 
     @Override
@@ -57,7 +58,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Document create(DocumentDto documentDto) {
-        validateSource(documentDto);
+        documentRuleHelper.requireExactlyOneSource(documentDto);
 
         Document document = new Document();
         document.setFolder(documentDto.folder());
@@ -77,9 +78,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Document upload(DocumentDto documentDto, String originalFilename, InputStream content) {
-        if (documentDto.sizeBytes() == null || documentDto.sizeBytes() == 0) {
-            throw new DocumentFileEmptyException();
-        }
+        documentRuleHelper.requireFileNotEmpty(documentDto);
 
         String filePath = fileStorageService.store(
                 originalFilename, documentDto.mimeType(), documentDto.sizeBytes(), content);
@@ -105,7 +104,7 @@ public class DocumentServiceImpl implements DocumentService {
     public Document update(String id, DocumentDto documentDto) {
         Document document = findByIdNotNull(id);
 
-        validateSource(documentDto);
+        documentRuleHelper.requireExactlyOneSource(documentDto);
 
         document.setFolder(documentDto.folder());
         document.setName(documentDto.name());
@@ -143,14 +142,5 @@ public class DocumentServiceImpl implements DocumentService {
             throw new DocumentFileDoesNotExistException(id);
         }
         return fileStorageService.load(document.getFilePath());
-    }
-
-    private void validateSource(DocumentDto documentDto) {
-        long sources = Stream.of(documentDto.contentMd(), documentDto.filePath(), documentDto.url())
-                .filter(source -> source != null)
-                .count();
-        if (sources != 1) {
-            throw new DocumentSourceInvalidException();
-        }
     }
 }
