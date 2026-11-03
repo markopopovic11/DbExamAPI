@@ -42,7 +42,8 @@ public class CourseController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CourseResponse> update(@PathVariable String id, @Valid @RequestBody CourseRequest request) {
+    public ResponseEntity<CourseResponse> update(@PathVariable String id,
+                                                 @Valid @RequestBody CourseRequest request) {
         return ResponseEntity.ok(courseMapper.update(id, request));
     }
 

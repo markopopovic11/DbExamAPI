@@ -1,7 +1,7 @@
 package finki.ukim.mk.dbexamapi.web.v1.mappers.content;
 
-import finki.ukim.mk.dbexamapi.domain.models.exams.Exam;
 import finki.ukim.mk.dbexamapi.domain.models.content.Folder;
+import finki.ukim.mk.dbexamapi.domain.models.exams.Exam;
 import finki.ukim.mk.dbexamapi.service.content.ExamFolderService;
 import finki.ukim.mk.dbexamapi.service.content.FolderService;
 import finki.ukim.mk.dbexamapi.service.exams.ExamService;
@@ -38,15 +38,13 @@ public class ExamFolderMapper {
     public ExamFolderResponse create(ExamFolderRequest request) {
         Exam exam = examService.findByIdNotNull(request.examId());
         Folder folder = folderService.findByIdNotNull(request.folderId());
-        return ExamFolderExtensions.toResponse(
-                examFolderService.create(ExamFolderExtensions.toDto(request, exam, folder)));
+        return ExamFolderExtensions.toResponse(examFolderService.create(ExamFolderExtensions.toDto(request, exam, folder)));
     }
 
     public ExamFolderResponse update(String id, ExamFolderRequest request) {
         Exam exam = examService.findByIdNotNull(request.examId());
         Folder folder = folderService.findByIdNotNull(request.folderId());
-        return ExamFolderExtensions.toResponse(
-                examFolderService.update(id, ExamFolderExtensions.toDto(request, exam, folder)));
+        return ExamFolderExtensions.toResponse(examFolderService.update(id, ExamFolderExtensions.toDto(request, exam, folder)));
     }
 
     public ExamFolderResponse deleteById(String id) {

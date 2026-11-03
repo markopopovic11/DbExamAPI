@@ -18,5 +18,13 @@ public interface TaskService {
 
     Task update(String id, TaskDto taskDto);
 
+    /**
+     * Also deletes what belongs to the task: its document links, objects, test steps,
+     * versions and expected results.
+     */
     Task deleteById(String id);
+
+    boolean existsByGroupId(String groupId);
+
+    boolean existsByDatasetId(String datasetId);
 }

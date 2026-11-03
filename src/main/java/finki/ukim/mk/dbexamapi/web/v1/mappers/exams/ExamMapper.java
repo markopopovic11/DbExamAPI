@@ -16,7 +16,8 @@ public class ExamMapper {
     private final ExamService examService;
     private final CourseService courseService;
 
-    public ExamMapper(ExamService examService, CourseService courseService) {
+    public ExamMapper(ExamService examService,
+                      CourseService courseService) {
         this.examService = examService;
         this.courseService = courseService;
     }

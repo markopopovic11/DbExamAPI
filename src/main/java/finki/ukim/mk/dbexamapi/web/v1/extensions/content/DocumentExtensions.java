@@ -10,23 +10,54 @@ import java.util.List;
 
 public final class DocumentExtensions {
 
+    private static final String MARKDOWN_MIME_TYPE = "text/markdown";
+
     private DocumentExtensions() {
     }
 
-    public static DocumentDto toDto(DocumentRequest request, Folder folder) {
+    /**
+     * existing is the document being updated, or null on create. A file document keeps its file:
+     * the request cannot set or change a file path.
+     */
+    public static DocumentDto toDto(DocumentRequest request, Folder folder, Document existing) {
+        boolean keepsFile = existing != null && existing.getFilePath() != null;
         return new DocumentDto(
                 folder,
                 request.name(),
-                request.documentMd()
+                request.contentMd(),
+                keepsFile ? existing.getFilePath() : null,
+                request.url(),
+                keepsFile ? existing.getMimeType() : request.contentMd() != null ? MARKDOWN_MIME_TYPE : null,
+                keepsFile ? existing.getSizeBytes() : null,
+                request.sortOrder()
+        );
+    }
+
+    public static DocumentDto toUploadDto(Folder folder, String name, String mimeType, long sizeBytes, int sortOrder) {
+        return new DocumentDto(
+                folder,
+                name,
+                null,
+                null,
+                null,
+                mimeType,
+                Math.toIntExact(sizeBytes),
+                sortOrder
         );
     }
 
     public static DocumentResponse toResponse(Document document) {
         return new DocumentResponse(
                 document.getId(),
-                document.getFolder().getId(),
+                document.getFolder() == null ? null : document.getFolder().getId(),
                 document.getName(),
-                document.getDocumentMd()
+                document.getContentMd(),
+                document.getUrl(),
+                document.getFilePath() != null,
+                document.getMimeType(),
+                document.getSizeBytes(),
+                document.getSortOrder(),
+                document.getUpdatedAt()
         );
     }
 

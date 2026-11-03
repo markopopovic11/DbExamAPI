@@ -28,8 +28,7 @@ public final class ExamExtensions {
                 exam.getCourse().getId(),
                 exam.getName(),
                 exam.getStartsAt(),
-                exam.getEndsAt(),
-                exam.getStatus()
+                exam.getEndsAt()
         );
     }
 

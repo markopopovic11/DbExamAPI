@@ -1,6 +1,5 @@
 package finki.ukim.mk.dbexamapi.domain.models.exams;
 
-import finki.ukim.mk.dbexamapi.domain.enums.ExamStatus;
 import finki.ukim.mk.dbexamapi.domain.models.common.BaseAuditableEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -23,13 +22,9 @@ public class Exam extends BaseAuditableEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "starts_at")
+    @Column(name = "starts_at", nullable = false)
     private Instant startsAt;
 
-    @Column(name = "ends_at")
+    @Column(name = "ends_at", nullable = false)
     private Instant endsAt;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status")
-    private ExamStatus status;
 }

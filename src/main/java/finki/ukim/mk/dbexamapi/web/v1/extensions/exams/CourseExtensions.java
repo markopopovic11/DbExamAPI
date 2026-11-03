@@ -13,11 +13,20 @@ public final class CourseExtensions {
     }
 
     public static CourseDto toDto(CourseRequest request) {
-        return new CourseDto(request.code(), request.name());
+        return new CourseDto(
+                request.code(),
+                request.name(),
+                request.active()
+        );
     }
 
     public static CourseResponse toResponse(Course course) {
-        return new CourseResponse(course.getId(), course.getCode(), course.getName());
+        return new CourseResponse(
+                course.getId(),
+                course.getCode(),
+                course.getName(),
+                course.isActive()
+        );
     }
 
     public static List<CourseResponse> toResponse(List<Course> courses) {
