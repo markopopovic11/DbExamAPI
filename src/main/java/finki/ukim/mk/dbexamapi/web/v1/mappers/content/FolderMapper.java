@@ -1,6 +1,8 @@
 package finki.ukim.mk.dbexamapi.web.v1.mappers.content;
 
+import finki.ukim.mk.dbexamapi.domain.models.exams.Course;
 import finki.ukim.mk.dbexamapi.service.content.FolderService;
+import finki.ukim.mk.dbexamapi.service.exams.CourseService;
 import finki.ukim.mk.dbexamapi.web.v1.extensions.content.FolderExtensions;
 import finki.ukim.mk.dbexamapi.web.v1.requests.content.FolderRequest;
 import finki.ukim.mk.dbexamapi.web.v1.responses.content.FolderResponse;
@@ -12,9 +14,12 @@ import java.util.List;
 public class FolderMapper {
 
     private final FolderService folderService;
+    private final CourseService courseService;
 
-    public FolderMapper(FolderService folderService) {
+    public FolderMapper(FolderService folderService,
+                        CourseService courseService) {
         this.folderService = folderService;
+        this.courseService = courseService;
     }
 
     public List<FolderResponse> findAll() {
@@ -26,11 +31,13 @@ public class FolderMapper {
     }
 
     public FolderResponse create(FolderRequest request) {
-        return FolderExtensions.toResponse(folderService.create(FolderExtensions.toDto(request)));
+        Course course = courseService.findByIdNotNull(request.courseId());
+        return FolderExtensions.toResponse(folderService.create(FolderExtensions.toDto(request, course)));
     }
 
     public FolderResponse update(String id, FolderRequest request) {
-        return FolderExtensions.toResponse(folderService.update(id, FolderExtensions.toDto(request)));
+        Course course = courseService.findByIdNotNull(request.courseId());
+        return FolderExtensions.toResponse(folderService.update(id, FolderExtensions.toDto(request, course)));
     }
 
     public FolderResponse deleteById(String id) {

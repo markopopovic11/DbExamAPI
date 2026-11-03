@@ -1,8 +1,10 @@
 package finki.ukim.mk.dbexamapi.web.v1.extensions.exams;
 
 import finki.ukim.mk.dbexamapi.domain.dtos.exams.TaskDto;
+import finki.ukim.mk.dbexamapi.domain.models.datasets.Dataset;
+import finki.ukim.mk.dbexamapi.domain.models.exams.Exam;
+import finki.ukim.mk.dbexamapi.domain.models.exams.ExamGroup;
 import finki.ukim.mk.dbexamapi.domain.models.exams.Task;
-import finki.ukim.mk.dbexamapi.domain.models.exams.TaskEnvironment;
 import finki.ukim.mk.dbexamapi.web.v1.requests.exams.TaskRequest;
 import finki.ukim.mk.dbexamapi.web.v1.responses.exams.TaskResponse;
 
@@ -13,15 +15,19 @@ public final class TaskExtensions {
     private TaskExtensions() {
     }
 
-    public static TaskDto toDto(TaskRequest request, TaskEnvironment environment) {
+    public static TaskDto toDto(TaskRequest request, Exam exam, ExamGroup group, Task sourceTask, Dataset dataset) {
         return new TaskDto(
-                environment,
-                request.position(),
+                exam,
+                group,
+                request.type(),
+                request.dataSource(),
+                sourceTask,
+                dataset,
+                request.solution(),
                 request.title(),
                 request.description(),
-                request.taskType(),
-                request.submissionMode(),
-                request.points()
+                request.points(),
+                request.sortOrder()
         );
     }
 
@@ -29,13 +35,16 @@ public final class TaskExtensions {
         return new TaskResponse(
                 task.getId(),
                 task.getExam().getId(),
-                task.getEnvironment().getId(),
-                task.getPosition(),
+                task.getGroup() == null ? null : task.getGroup().getId(),
+                task.getType(),
+                task.getDataSource(),
+                task.getSourceTask() == null ? null : task.getSourceTask().getId(),
+                task.getDataset() == null ? null : task.getDataset().getId(),
+                task.getSolution(),
                 task.getTitle(),
                 task.getDescription(),
-                task.getTaskType(),
-                task.getSubmissionMode(),
-                task.getPoints()
+                task.getPoints(),
+                task.getSortOrder()
         );
     }
 

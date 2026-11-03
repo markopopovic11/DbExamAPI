@@ -1,9 +1,9 @@
 package finki.ukim.mk.dbexamapi.web.v1.extensions.content;
 
 import finki.ukim.mk.dbexamapi.domain.dtos.content.ExamFolderDto;
-import finki.ukim.mk.dbexamapi.domain.models.exams.Exam;
 import finki.ukim.mk.dbexamapi.domain.models.content.ExamFolder;
 import finki.ukim.mk.dbexamapi.domain.models.content.Folder;
+import finki.ukim.mk.dbexamapi.domain.models.exams.Exam;
 import finki.ukim.mk.dbexamapi.web.v1.requests.content.ExamFolderRequest;
 import finki.ukim.mk.dbexamapi.web.v1.responses.content.ExamFolderResponse;
 
@@ -17,7 +17,8 @@ public final class ExamFolderExtensions {
     public static ExamFolderDto toDto(ExamFolderRequest request, Exam exam, Folder folder) {
         return new ExamFolderDto(
                 exam,
-                folder
+                folder,
+                request.sortOrder()
         );
     }
 
@@ -25,7 +26,8 @@ public final class ExamFolderExtensions {
         return new ExamFolderResponse(
                 examFolder.getId(),
                 examFolder.getExam().getId(),
-                examFolder.getFolder().getId()
+                examFolder.getFolder().getId(),
+                examFolder.getSortOrder()
         );
     }
 

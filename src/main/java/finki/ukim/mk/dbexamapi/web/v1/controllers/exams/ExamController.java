@@ -42,7 +42,8 @@ public class ExamController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ExamResponse> update(@PathVariable String id, @Valid @RequestBody ExamRequest request) {
+    public ResponseEntity<ExamResponse> update(@PathVariable String id,
+                                               @Valid @RequestBody ExamRequest request) {
         return ResponseEntity.ok(examMapper.update(id, request));
     }
 

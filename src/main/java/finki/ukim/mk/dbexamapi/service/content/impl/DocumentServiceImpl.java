@@ -2,16 +2,21 @@ package finki.ukim.mk.dbexamapi.service.content.impl;
 
 import finki.ukim.mk.dbexamapi.domain.dtos.content.DocumentDto;
 import finki.ukim.mk.dbexamapi.domain.exceptions.content.DocumentDoesNotExistException;
+import finki.ukim.mk.dbexamapi.domain.exceptions.content.DocumentFileDoesNotExistException;
+import finki.ukim.mk.dbexamapi.domain.exceptions.content.DocumentFileEmptyException;
 import finki.ukim.mk.dbexamapi.domain.exceptions.content.DocumentInUseException;
 import finki.ukim.mk.dbexamapi.domain.exceptions.content.DocumentSourceInvalidException;
 import finki.ukim.mk.dbexamapi.domain.models.content.Document;
 import finki.ukim.mk.dbexamapi.repository.content.DocumentRepository;
 import finki.ukim.mk.dbexamapi.service.content.DocumentService;
+import finki.ukim.mk.dbexamapi.service.content.FileStorageService;
 import finki.ukim.mk.dbexamapi.service.content.TaskDocumentService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -23,10 +28,14 @@ public class DocumentServiceImpl implements DocumentService {
 
     private final DocumentRepository documentRepository;
     private final TaskDocumentService taskDocumentService;
+    private final FileStorageService fileStorageService;
 
-    public DocumentServiceImpl(DocumentRepository documentRepository, TaskDocumentService taskDocumentService) {
+    public DocumentServiceImpl(DocumentRepository documentRepository,
+                               TaskDocumentService taskDocumentService,
+                               FileStorageService fileStorageService) {
         this.documentRepository = documentRepository;
         this.taskDocumentService = taskDocumentService;
+        this.fileStorageService = fileStorageService;
     }
 
     @Override
@@ -67,6 +76,32 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional
+    public Document upload(DocumentDto documentDto, String originalFilename, InputStream content) {
+        if (documentDto.sizeBytes() == null || documentDto.sizeBytes() == 0) {
+            throw new DocumentFileEmptyException();
+        }
+
+        String filePath = fileStorageService.store(
+                originalFilename, documentDto.mimeType(), documentDto.sizeBytes(), content);
+        try {
+            return create(new DocumentDto(
+                    documentDto.folder(),
+                    documentDto.name(),
+                    null,
+                    filePath,
+                    null,
+                    documentDto.mimeType(),
+                    documentDto.sizeBytes(),
+                    documentDto.sortOrder()
+            ));
+        } catch (RuntimeException exception) {
+            fileStorageService.delete(filePath);
+            throw exception;
+        }
+    }
+
+    @Override
+    @Transactional
     public Document update(String id, DocumentDto documentDto) {
         Document document = findByIdNotNull(id);
 
@@ -94,8 +129,20 @@ public class DocumentServiceImpl implements DocumentService {
             throw new DocumentInUseException(id);
         }
         documentRepository.delete(document);
+        if (document.getFilePath() != null) {
+            fileStorageService.delete(document.getFilePath());
+        }
         log.info("Deleted document with id: {}", id);
         return document;
+    }
+
+    @Override
+    public Resource loadFile(String id) {
+        Document document = findByIdNotNull(id);
+        if (document.getFilePath() == null) {
+            throw new DocumentFileDoesNotExistException(id);
+        }
+        return fileStorageService.load(document.getFilePath());
     }
 
     private void validateSource(DocumentDto documentDto) {
